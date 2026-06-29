@@ -88,3 +88,13 @@ const clearActiveSearch = (refetch) => {
         getNews(currentCategory);
     }
 };
+
+// Listeners
+categoryPills.forEach(pill => {
+    pill.addEventListener("click", () => {
+        categoryPills.forEach(p => p.classList.toggle("active", p === pill));
+        currentCategory = pill.dataset.category;
+        clearActiveSearch(false);
+        getNews(currentCategory);
+    });
+});
