@@ -98,3 +98,40 @@ categoryPills.forEach(pill => {
         getNews(currentCategory);
     });
 });
+
+searchBtn.addEventListener("click", performSearch);
+searchInput.addEventListener("keydown", e => e.key === "Enter" && performSearch());
+clearSearchBtn.addEventListener("click", () => clearActiveSearch(true));
+
+// Helper & Init
+const escapeHTML = str => {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+};
+
+// Load Env and Init App
+(async function initApp() {
+    try {
+        const res = await fetch('.env');
+        if (!res.ok) throw new Error("Failed to fetch .env");
+        const text = await res.text();
+        const match = text.match(/API_KEY=(.*)/);
+        if (match) API_KEY = match[1].trim();
+    } catch (e) {
+        console.error("Warning: Could not load .env file. If you are opening this via file://, fetch('.env') won't work due to browser CORS policies. Please use a local server like VS Code Live Server.", e);
+    }
+    
+    if (!API_KEY) {
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("newsContainer").innerHTML = `
+            <div class="state-message error">
+                <span class="state-emoji">⚠️</span>
+                <h2>API Key Missing</h2>
+                <p>Could not load <code>.env</code> file. <br>Make sure you are running a local server (e.g., Live Server) so the browser can read the file.</p>
+            </div>`;
+        return;
+    }
+    
+    getNews();
+})();
