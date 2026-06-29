@@ -69,3 +69,22 @@ function displayNews(articles) {
             </div>`;
     }).join("");
 }
+
+// Search Actions
+const performSearch = () => {
+    const query = searchInput.value.trim();
+    if (!query) return searchInput.focus();
+    categoryPills.forEach(p => p.classList.remove("active"));
+    activeSearchTag.style.display = "flex";
+    activeSearchValue.textContent = query;
+    searchNews(query);
+};
+
+const clearActiveSearch = (refetch) => {
+    searchInput.value = activeSearchValue.textContent = "";
+    activeSearchTag.style.display = "none";
+    if (refetch) {
+        categoryPills.forEach(p => p.classList.toggle("active", p.dataset.category === currentCategory));
+        getNews(currentCategory);
+    }
+};
