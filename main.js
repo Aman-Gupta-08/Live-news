@@ -1,4 +1,5 @@
 let API_KEY = "";
+let useProxy = true; // Default to proxy on deployment
 
 const newsContainer = document.getElementById("newsContainer");
 const loader = document.getElementById("loader");
@@ -12,9 +13,22 @@ const categoryPills = document.querySelectorAll(".category-pill");
 let currentCategory = "general";
 
 // Fetch Helper
-async function fetchNews(url, errorMsg) {
+async function fetchNews(urlPath, queryParams, errorMsg) {
     loader.style.display = "flex";
     newsContainer.innerHTML = "";
+    
+    let url = "";
+    if (useProxy) {
+        // Use Vercel Serverless Function proxy
+        const searchParams = new URLSearchParams(queryParams);
+        searchParams.append("type", urlPath);
+        url = `/api/news?${searchParams.toString()}`;
+    } else {
+        // Query NewsAPI directly
+        const searchParams = new URLSearchParams({ ...queryParams, apiKey: API_KEY });
+        url = `https://newsapi.org/v2/${urlPath}?${searchParams.toString()}`;
+    }
+
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(errorMsg);
@@ -32,8 +46,8 @@ async function fetchNews(url, errorMsg) {
     }
 }
 
-const getNews = (category = "general") => fetchNews(`https://newsapi.org/v2/top-headlines?country=us&category=${category}&apiKey=${API_KEY}`, "Failed to fetch news");
-const searchNews = (query) => fetchNews(`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${API_KEY}`, "Search failed");
+const getNews = (category = "general") => fetchNews("top-headlines", { category }, "Failed to fetch news");
+const searchNews = (query) => fetchNews("everything", { q: query }, "Search failed");
 
 // Render
 function displayNews(articles) {
@@ -112,26 +126,26 @@ const escapeHTML = str => {
 
 // Load Env and Init App
 (async function initApp() {
-    try {
-        const res = await fetch('.env');
-        if (!res.ok) throw new Error("Failed to fetch .env");
-        const text = await res.text();
-        const match = text.match(/API_KEY=(.*)/);
-        if (match) API_KEY = match[1].trim();
-    } catch (e) {
-        console.error("Warning: Could not load .env file. If you are opening this via file://, fetch('.env') won't work due to browser CORS policies. Please use a local server like VS Code Live Server.", e);
-    }
-    
-    if (!API_KEY) {
-        document.getElementById("loader").style.display = "none";
-        document.getElementById("newsContainer").innerHTML = `
-            <div class="state-message error">
-                <span class="state-emoji">⚠️</span>
-                <h2>API Key Missing</h2>
-                <p>Could not load <code>.env</code> file. <br>Make sure you are running a local server (e.g., Live Server) so the browser can read the file.</p>
-            </div>`;
-        return;
+    const isLocal = window.location.hostname === "localhost" || 
+                    window.location.hostname === "127.0.0.1" || 
+                    window.location.protocol === "file:";
+
+    if (isLocal) {
+        try {
+            const res = await fetch('.env');
+            if (res.ok) {
+                const text = await res.text();
+                const match = text.match(/API_KEY=(.*)/);
+                if (match) {
+                    API_KEY = match[1].trim();
+                    useProxy = false; // We have a local API Key, we can query NewsAPI directly
+                }
+            }
+        } catch (e) {
+            console.log("Could not load local .env, falling back to Vercel API proxy", e);
+        }
     }
     
     getNews();
 })();
+
